@@ -129,6 +129,103 @@ const logout = asyncHandler(async (req, res)=>{
     })
 });
 
+// Get user Data
+const getUser = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+
+    if(user){
+        const {_id, name, email, photo, phone, bio} = user;
+        res.status(200).json({
+            _id,
+            name, 
+            email,
+            photo,
+            bio,
+            phone
+        });
+    }else{
+        res.status(400);
+        throw new Error("User not found!");
+    }
+});
+
+const loginStatus = asyncHandler(async(req, res) =>{
+    
+    const token = req.cookies.token;
+    if(!token){
+        return res.json(false);
+    }
+    // Need to verify token
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    if(verified){
+        return res.json(true);
+    }
+    return res.json(false);
+
+});
+
+const updateUser = asyncHandler(async (req, res) =>{
+    const user = await User.findById(req.user._id);
+    
+    if(user){
+        const {name, email, photo, phone, bio} = user;
+        user.email = email;
+        user.name = req.body.name||name;
+        user.photo = req.body.photo||photo;
+        user.phone = req.body.phone||phone;
+        user.bio = req.body.bio||bio;
+        
+        const updatedUser = await user.save()
+        res.status(200).json({
+            _id: updatedUser._id,
+            email: updatedUser.email,
+            name: updatedUser.name,
+            photo: updatedUser.photo,
+            phone: updatedUser.phone,
+            bio: updatedUser.bio
+        })
+    }
+    else{
+        res.status(404);
+        throw new Error("User not found");
+    }
+});
+
+const changePassword = asyncHandler(async (req, res)=>{
+    const user = await User.findById(req.user._id);
+
+    const {oldPassword, password} = req.body;
+    // if password is same as old password
+    if(oldPassword === password){
+        throw new Error("Old password is same as new password!");
+    }
+    if(!user){
+        res.status(400);
+        throw new Error("User not found, please signup");
+    }
+    //Validation
+    if(!oldPassword || !password){
+        res.status(400);
+        throw new Error("Please input the cridentials");
+    }
+
+    // Verify old password from DB password
+    const passwordIsCorred = await bryptjs.compare(oldPassword,user.password);
+    /*Here as we have saved the initial password "Hash" in the User Model 
+    We didnt need to encrypt the input old password and easyly use compare function
+    to verify*/
+
+    if(user && passwordIsCorred){
+        user.password = password;
+        await user.save();
+        res.status(200).send("Password changed successfully");
+    }else{
+        res.status(400)
+        throw new Error("Old password is incorrect");
+    }
+})
+
 module.exports = {
-    registerUser, loginUser,logout,
+    registerUser, loginUser,logout,getUser,
+    loginStatus,updateUser,changePassword,
 }

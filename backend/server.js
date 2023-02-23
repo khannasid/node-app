@@ -22,6 +22,7 @@ app.use("/api/users",userRoute);
 app.get("/", (req, res) =>{
     res.send("Home Page");
 })
+
 //Error Middleware
 app.use(errorHandler);
 
